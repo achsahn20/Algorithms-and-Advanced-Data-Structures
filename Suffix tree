@@ -1,0 +1,124 @@
+#include <iostream>
+#include <map>
+#include <string>
+using namespace std;
+
+// Node structure for the Suffix Tree
+class SuffixTreeNode {
+public:
+    map<char, SuffixTreeNode*> children; // Edges to child nodes
+    int start;  // Start index of the edge
+    int* end;   // End index of the edge
+    SuffixTreeNode* suffixLink; // Link to another node (used in advanced implementations)
+
+    SuffixTreeNode(int start, int* end) : start(start), end(end), suffixLink(nullptr) {}
+};
+
+// Suffix Tree class
+class SuffixTree {
+private:
+    SuffixTreeNode* root; // Root node
+    string text;          // Input string
+    int size;             // Length of the string
+
+    // Helper function to delete the tree and free memory
+    void freeTree(SuffixTreeNode* node) {
+        for (auto& child : node->children) {
+            freeTree(child.second);
+        }
+        delete node->end;
+        delete node;
+    }
+
+    // Helper function to print the tree
+    void printTree(SuffixTreeNode* node, int level = 0) {
+        for (auto& child : node->children) {
+            for (int i = 0; i < level; i++) cout << " ";
+            cout << text.substr(child.second->start, *(child.second->end) - child.second->start + 1) << "\n";
+            printTree(child.second, level + 4);
+        }
+    }
+
+public:
+    SuffixTree(const string& str) : text(str), size(str.size()) {
+        root = new SuffixTreeNode(-1, new int(-1));
+        buildSuffixTree();
+    }
+
+    ~SuffixTree() {
+        freeTree(root);
+    }
+
+    // Function to build the suffix tree
+    void buildSuffixTree() {
+        for (int i = 0; i < size; i++) {
+            insertSuffix(i);
+        }
+    }
+
+    // Function to insert a suffix into the tree
+    void insertSuffix(int suffixStart) {
+        SuffixTreeNode* current = root;
+        for (int i = suffixStart; i < size; i++) {
+            char currentChar = text[i];
+            if (current->children.find(currentChar) == current->children.end()) {
+                current->children[currentChar] = new SuffixTreeNode(i, new int(size - 1));
+                return;
+            }
+            current = current->children[currentChar];
+        }
+    }
+
+    // Function to search for a pattern in the text
+    bool search(const string& pattern) {
+        SuffixTreeNode* current = root;
+        int i = 0;
+
+        while (i < pattern.size()) {
+            if (current->children.find(pattern[i]) == current->children.end()) {
+                return false;
+            }
+            current = current->children[pattern[i]];
+            int start = current->start;
+            int end = *(current->end);
+
+            for (int j = start; j <= end && i < pattern.size(); j++, i++) {
+                if (text[j] != pattern[i]) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    // Function to display the suffix tree
+    void display() {
+        printTree(root);
+    }
+};
+
+// Main function
+int main() {
+    string input;
+    cout << "Enter the string to build the suffix tree: ";
+    cin >> input;
+
+    SuffixTree suffixTree(input);
+    cout << "Suffix tree built successfully.\n";
+
+    cout << "Displaying the suffix tree:\n";
+    suffixTree.display();
+
+    string pattern;
+    cout << "Enter a pattern to search: ";
+    cin >> pattern;
+
+    if (suffixTree.search(pattern)) {
+        cout << "Pattern \"" << pattern << "\" found in the text.\n";
+    } else {
+        cout << "Pattern \"" << pattern << "\" not found in the text.\n";
+    }
+
+    return 0;
+}
